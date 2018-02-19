@@ -47,6 +47,20 @@ const view = (function() {
     }, 2500);
   };
 
+  const drawSpinner = function() {
+    const weatherText = document.getElementById("weatherInfo");
+    const spinnerSpan = document.createElement("span");
+    const spinnerIcon = document.createElement("i");
+    spinnerIcon.className = "fa fa-spinner fa-spin fa-lg";
+    spinnerSpan.className = "has-text-centered loading";
+    spinnerSpan.appendChild(spinnerIcon);
+    weatherText.appendChild(spinnerSpan);
+  };
+
+  const clearText = function() {
+    document.getElementById("weatherInfo").textContent = "";
+  };
+
   const drawImg = function(src) {
     const imgTag = document.getElementById("weatherImg");
     imgTag.setAttribute("src", src);
@@ -74,7 +88,9 @@ const view = (function() {
   };
   return {
     drawError,
-    render
+    render,
+    drawSpinner,
+    clearText
   };
 })();
 
@@ -82,6 +98,7 @@ const handlers = (function() {
   const getWeather = function(pos) {
     WeatherAPI.getWeather(pos.coords.longitude, pos.coords.latitude)
       .then(res => {
+        view.clearText();
         model.setState(res);
         view.render(model.state);
       })
@@ -90,7 +107,9 @@ const handlers = (function() {
 
   const init = function() {
     if (navigator.geolocation) {
+      view.drawSpinner();
       navigator.geolocation.getCurrentPosition(getWeather, err => {
+        view.clearText();
         view.drawError(err.message);
       });
     } else {
