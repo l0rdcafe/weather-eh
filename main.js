@@ -1,5 +1,25 @@
+function qs(selector, scope) {
+  return (scope || document).querySelector(selector);
+}
+
+function $on(target, type, cb, useCapture) {
+  target.addEventListener(type, cb, !!useCapture);
+}
+
+function $parent(element, tagName) {
+  if (!element.parentNode) {
+    return undefined;
+  }
+  if (element.parentNode.tagName.toLowerCase() === tagName.toLowerCase()) {
+    return element.parentNode;
+  }
+
+  return $parent(element.parentNode, tagName);
+}
+
 const WeatherAPI = (function() {
-  const endPoint = "https://fcc-weather-api.glitch.me/api/current";
+  const API_KEY = "02c4f393fc03395eb2f52849d3ee647b";
+  const endPoint = "https://api.openweathermap.org/data/2.5/weather";
   function getJSON(url) {
     return fetch(url, {
       headers: {
@@ -9,8 +29,8 @@ const WeatherAPI = (function() {
       .then(res => res.json())
       .catch(err => err);
   }
-  const getWeather = function(long, lat) {
-    const url = `${endPoint}?lon=${long}&lat=${lat}`;
+  const getWeather = function(lon, lat) {
+    const url = `${endPoint}?lat=${lat}&lon=${lon}&units=metric&APPID=${API_KEY}`;
     return getJSON(url);
   };
   return {
@@ -32,58 +52,40 @@ const model = (function() {
 
 const view = (function() {
   const drawError = function(message) {
-    const errorNotif = document.createElement("div");
-    errorNotif.className = "is-danger notification";
-    errorNotif.style.width = "30%";
-    errorNotif.style.display = "block";
-    errorNotif.style.margin = "auto";
-    errorNotif.style.marginBottom = "0.75rem";
-    errorNotif.style.textAlign = "center";
-    errorNotif.textContent = message;
-    const cont = document.querySelector(".container");
-    cont.insertBefore(errorNotif, cont.firstChild);
+    const errorNotif = `<div class="is-danger notification" style="width: 30%; display: block; margin: auto; margin-bottom: 0.75rem; text-align: center;">${message}</div>`;
+    const cont = qs(".container");
+    cont.insertAdjacentHTML("afterbegin", errorNotif);
     setTimeout(() => {
-      errorNotif.parentNode.removeChild(errorNotif);
+      const notif = qs(".notification");
+      $parent(notif, "div").removeChild(notif);
     }, 2500);
   };
 
   const drawSpinner = function() {
-    const weatherText = document.getElementById("weatherInfo");
-    const spinnerSpan = document.createElement("span");
-    const spinnerIcon = document.createElement("i");
-    spinnerIcon.className = "fa fa-spinner fa-spin fa-lg";
-    spinnerSpan.className = "has-text-centered loading";
-    spinnerSpan.appendChild(spinnerIcon);
-    weatherText.appendChild(spinnerSpan);
+    const weatherText = qs("#weatherInfo");
+    const spinner = `<span class="has-text-centered loading"><i class="fa fa-spinner fa-spin fa-lg"></i></span>`;
+    weatherText.insertAdjacentHTML("beforeend", spinner);
   };
 
   const clearText = function() {
-    document.getElementById("weatherInfo").textContent = "";
+    qs("#weatherInfo").textContent = "";
   };
 
   const drawImg = function(src) {
-    const imgTag = document.getElementById("weatherImg");
-    imgTag.setAttribute("src", src);
+    const imgTag = qs("#weatherImg");
+    imgTag.setAttribute("src", `https://openweathermap.org/img/w/${src}.png`);
   };
 
   const render = function(state) {
-    const weatherPara = document.getElementById("weatherInfo");
-    const weatherMin = document.createElement("p");
-    const weatherMax = document.createElement("p");
-    const location = document.createElement("p");
-    const description = document.createElement("p");
-    description.className = "subtitle has-text-centered";
-    weatherMin.className = "subtitle has-text-centered";
-    location.className = "subtitle has-text-centered";
-    weatherMax.className = "subtitle has-text-centered";
-    weatherMax.innerHTML = `Max: ${state.main.temp_max} °C`;
-    weatherMin.innerHTML = `Min: ${state.main.temp_min} °C`;
-    location.innerHTML = `${state.name}`;
-    description.innerHTML = `${state.weather[0].main}`;
-    weatherPara.appendChild(description);
-    weatherPara.appendChild(weatherMax);
-    weatherPara.appendChild(weatherMin);
-    weatherPara.appendChild(location);
+    const weatherPara = qs("#weatherInfo");
+    const weatherInfo = `<p class="subtitle has-textcentered">${
+      state.weather[0].main
+    }</p><p class="subtitle has-textcentered">Max: ${
+      state.main.temp_max
+    } °C</p><p class="subtitle has-textcentered">Min: ${
+      state.main.temp_min
+    } °C</p><p class="subtitle has-textcentered">${state.name}</p>`;
+    weatherPara.insertAdjacentHTML("beforeend", weatherInfo);
     drawImg(state.weather[0].icon);
   };
   return {
@@ -98,6 +100,7 @@ const handlers = (function() {
   const getWeather = function(pos) {
     WeatherAPI.getWeather(pos.coords.longitude, pos.coords.latitude)
       .then(res => {
+        console.log(res);
         view.clearText();
         model.setState(res);
         view.render(model.state);
@@ -121,6 +124,6 @@ const handlers = (function() {
   };
 })();
 
-document.addEventListener("DOMContentLoaded", () => {
+$on(document, "DOMContentLoaded", () => {
   handlers.init();
 });
